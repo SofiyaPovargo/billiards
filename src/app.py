@@ -2,7 +2,7 @@ import sys
 import math
 from PyQt6.QtWidgets import QApplication, QGraphicsView, QGraphicsScene
 from PyQt6.QtCore import Qt, QTimer, QPointF
-from PyQt6.QtGui import QBrush, QColor, QPen, QRadialGradient, QPixmap, QPainter
+from PyQt6.QtGui import QBrush, QColor, QPen, QRadialGradient, QPixmap, QPainter, QPainterPath
 from core.physics import PhysicsEngine
 from core.ball import Ball
 from core.table import Table
@@ -50,18 +50,24 @@ class BilliardsGame(QGraphicsView):
     def init_balls(self):
         ball_radius = 15
         self.balls.append(Ball(0, ball_radius, (300, 225)))
-
+        pyramid_order = [
+            [1],            # первый ряд
+            [2, 9],         # второй ряд
+            [3, 7, 8],      # третий ряд
+            [10, 6, 4, 5],  # четвертый ряд
+            [11, 15, 14, 12, 13]  # пятый ряд
+        ]
         #пирамида
         start_x, start_y = 600, 225
         spacing = ball_radius * 2.2
 
-        for row in range(5):
-            for col in range(row + 1):
-                ball_num = row * (row + 1) // 2 + col + 1
+        for row in range(len(pyramid_order)):
+            for col in range(len(pyramid_order[row])):
+                ball_num = pyramid_order[row][col]
                 x = start_x + row * spacing * math.cos(math.pi/6)
                 y = start_y + (col - row/2) * spacing
                 self.balls.append(Ball(ball_num, ball_radius, (x, y)))
-        
+
         for ball in self.balls:
             self.physics.add_ball(ball)   
 
@@ -133,21 +139,40 @@ class BilliardsGame(QGraphicsView):
 
     def draw_ball(self, ball):
         if ball.position:
-            #Основной шар
+            brush = QBrush(QColor(*ball.color))
+            pen = QPen(Qt.GlobalColor.black, 1)
+            
             self.scene.addEllipse(
                 ball.position[0] - ball.radius,
                 ball.position[1] - ball.radius,
                 ball.radius * 2,
                 ball.radius * 2,
-                QPen(Qt.GlobalColor.black, 1),
-                QBrush(QColor(*ball.color)))
+                pen,
+                brush)
             
-            #Номер на шаре
-            if ball.number > 0:
+        is_striped = 9 <= ball.number <= 15
+        if is_striped:
+            stripe_height = ball.radius * 0.6 
+            stripe_width = ball.radius * 1.8 
+        
+            self.scene.addRect(
+                ball.position[0] - stripe_width/2,  
+                ball.position[1] - stripe_height/2, 
+                stripe_width,                  
+                stripe_height,                     
+                QPen(Qt.PenStyle.NoPen),           
+                QBrush(QColor(255, 255, 255)))  
+            
+        if ball.number > 0:
                 text = self.scene.addSimpleText(str(ball.number))
-                text.setBrush(QColor(255, 255, 255) if ball.number != 8 else QColor(255, 255, 0))
-                text.setPos(ball.position[0] - text.boundingRect().width()/2,
-                        ball.position[1] - text.boundingRect().height()/2)
+                if is_striped or ball.number == 1:
+                    text.setBrush(QColor(0, 0, 0))
+                else:
+                    text.setBrush(QColor(255, 255, 255) if ball.number != 8 else QColor(255, 255, 0))
+                text.setPos(
+                    ball.position[0] - text.boundingRect().width()/2,
+                    ball.position[1] - text.boundingRect().height()/2)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
