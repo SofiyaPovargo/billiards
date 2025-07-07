@@ -8,14 +8,14 @@ class Table:
 
     def _init_pockets(self) -> list[tuple[float, float]]:
         return [
-            (0, 0),
-            (self.width // 2, 0),
-            (self.width, 0),
-            (0, self.height),
-            (self.width // 2, self.height),
-            (self.width, self.height)
+            (25, 25),  
+            (self.width // 2, 25),
+            (self.width - 25, 25), 
+            (25, self.height - 25), 
+            (self.width // 2, self.height - 25),
+            (self.width - 25, self.height - 25)
         ]
-
+    
     def create_pymunk_borders(self, space: pm.Space, thickness: float = 20.0):
         borders = [
             [(0, 0), (self.width, 0)],

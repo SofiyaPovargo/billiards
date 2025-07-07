@@ -39,6 +39,8 @@ class BilliardsGame(QGraphicsView):
         self.cue_line = None
         self.cue_ball = self.balls[0]
 
+        self.draw_game()
+
     def create_table_brush(self):
         gradient = QRadialGradient(450, 225, 500)
         gradient.setColorAt(0, QColor(0, 80, 0))
@@ -71,24 +73,18 @@ class BilliardsGame(QGraphicsView):
         border_brush = QBrush(QColor(101, 67, 33)) 
         border_pen = QPen(QColor(70, 50, 20), 2)   
         
-        borders = [
-            [(0, 0), (900, 0), (900, 20), (0, 20)],           # Верх
-            [(0, 430), (900, 430), (900, 450), (0, 450)],      # Низ
-            [(0, 0), (20, 0), (20, 450), (0, 450)],            # Лево
-            [(880, 0), (900, 0), (900, 450), (880, 450)]       # Право
-        ]
-        
-        for border in borders:
-            self.scene.addPolygon([QPointF(*p) for p in border], 
-                                 border_pen, border_brush)
-        
+        self.scene.addRect(0, 0, 900, 20, border_pen, border_brush)  # Верх
+        self.scene.addRect(0, 430, 900, 20, border_pen, border_brush)  # Низ
+        self.scene.addRect(0, 0, 20, 450, border_pen, border_brush)  # Лево
+        self.scene.addRect(880, 0, 20, 450, border_pen, border_brush)  # Право
+
         #лунки
         pocket_brush = QBrush(QColor(0, 0, 0))
         for pos in self.table.pockets:
             self.scene.addEllipse(
                 pos[0]-25, pos[1]-25, 50, 50,
                 QPen(Qt.PenStyle.NoPen), pocket_brush
-            )         
+            ) 
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -123,28 +119,35 @@ class BilliardsGame(QGraphicsView):
 
     def update_game(self):
         self.physics.update(1/60.0)
-        self.cue_ball.update_position()
-        self.target_ball.update_position()
+        for ball in self.balls:  
+            ball.update_position()
         self.draw_game()
 
     def draw_game(self):
         self.scene.clear()
-        self.scene.addRect(0, 0, 900, 450, brush=QBrush(Qt.GlobalColor.green))
-        self.draw_ball(self.cue_ball)
-        self.draw_ball(self.target_ball)
-        
+        self.draw_table()
+        for ball in self.balls:  
+            self.draw_ball(ball)
         if self.cue_line:
             self.scene.addItem(self.cue_line)
 
     def draw_ball(self, ball):
         if ball.position:
+            #Основной шар
             self.scene.addEllipse(
                 ball.position[0] - ball.radius,
                 ball.position[1] - ball.radius,
                 ball.radius * 2,
                 ball.radius * 2,
-                brush=QBrush(QColor(*ball.color))
-            )
+                QPen(Qt.GlobalColor.black, 1),
+                QBrush(QColor(*ball.color)))
+            
+            #Номер на шаре
+            if ball.number > 0:
+                text = self.scene.addSimpleText(str(ball.number))
+                text.setBrush(QColor(255, 255, 255) if ball.number != 8 else QColor(255, 255, 0))
+                text.setPos(ball.position[0] - text.boundingRect().width()/2,
+                        ball.position[1] - text.boundingRect().height()/2)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
