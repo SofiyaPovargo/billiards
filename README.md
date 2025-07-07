@@ -8,7 +8,7 @@
 
 ### Библиотеки и инструменты
 - pymunk
-- - PyQt <img src="https://www.pythonguis.com/static/images/libraries/pyqt6.png" width="20">
+- - PyQt <img src="https://www.pythonguis.com/static/images/libraries/pyqt6.png" width="40">
 
 ### Среда разработки
 - VS Code
