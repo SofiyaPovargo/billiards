@@ -6,7 +6,8 @@ class MainWindow(QMainWindow):
     def __init__(self, game_canvas):
         super().__init__()
         self.setWindowTitle("2D Бильярд")
-        
+        self.setFixedSize(1000, 550) 
+
         self.game_canvas = game_canvas
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_game)
@@ -20,6 +21,4 @@ class MainWindow(QMainWindow):
 
     def update_game(self):
         self.game_canvas.physics.update(1/60.0)
-        for ball in self.game_canvas.balls:
-            ball.update_position()
-        self.game_canvas.update_display()
+        self.game_canvas.update_display() 

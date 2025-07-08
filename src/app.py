@@ -1,7 +1,9 @@
 # src/app.py
 import sys
 import math
+import os
 from PyQt6.QtWidgets import QApplication
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.physics import PhysicsEngine
 from core.ball import Ball
 from core.table import Table
@@ -46,7 +48,12 @@ def main():
         physics.add_ball(ball)
     
     # Создание UI
-    game_canvas = GameCanvas(physics, table, balls)
+    game_canvas = GameCanvas(
+        physics=physics,
+        table=table,
+        balls=balls
+    )
+
     window = MainWindow(game_canvas)
     window.show()
     

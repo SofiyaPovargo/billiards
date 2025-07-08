@@ -14,6 +14,8 @@ class Ball:
         self.color = color if color is not None else self._get_ball_color(number)
         self.velocity = velocity
         self.body = None
+        self.in_pocket = False
+        self.in_pocket = False 
 
     def  _get_ball_color(self, number: int) -> tuple[int, int, int]:
         #шарики 1-7 сплошные, а 9-15 с полоской, 8 шарик чёрный для битья
