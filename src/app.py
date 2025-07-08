@@ -48,11 +48,7 @@ def main():
         physics.add_ball(ball)
     
     # Создание UI
-    game_canvas = GameCanvas(
-        physics=physics,
-        table=table,
-        balls=balls
-    )
+    game_canvas = GameCanvas(physics, table, balls)
 
     window = MainWindow(game_canvas)
     window.show()

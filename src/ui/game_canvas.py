@@ -28,6 +28,12 @@ class GameCanvas(QGraphicsView):
 
         self.draw_table()
         self.update_balls()
+
+        self.setup_collision_handler()
+
+    def setup_collision_handler(self):
+        if not hasattr(self.physics, 'space'):
+            raise AttributeError("Physics engine doesn't have space attribute")
         handler = self.physics.space.add_collision_handler(0, 1)
         handler.begin = self.handle_ball_pocket_collection
 
@@ -156,21 +162,24 @@ class GameCanvas(QGraphicsView):
         for ball in self.balls:
             if hasattr(ball, 'body') and ball.body:
                 ball.update_position()
-                ball.position = (ball.body.position.x, ball.body.position.y)
-    
-        balls_to_remove = [ball for ball in self.balls if getattr(ball, 'in_pocket', False)]
-        for ball in balls_to_remove:
-            if ball.body:
-                self.physics.space.remove(ball.body, ball.body.shapes[0])
-            self.balls.remove(ball)
         
+        balls_to_remove = [b for b in self.balls if getattr(b, 'in_pocket', False)]
+        for ball in balls_to_remove:
+            if ball.body and ball.body.shapes:
+                shape = next(iter(ball.body.shapes))
+                self.physics.space.remove(ball.body, shape)
+            self.balls.remove(ball)
+
         for item in self.scene.items():
             if isinstance(item, (QGraphicsEllipseItem, QGraphicsSimpleTextItem)):
                 if not hasattr(item, 'is_table_item'):
                     self.scene.removeItem(item)
-        
+    
         for ball in self.balls:
             self.draw_ball(ball)
+            
+            for ball in self.balls:
+                self.draw_ball(ball)
 
     def update_display(self):
         self.update_balls()
