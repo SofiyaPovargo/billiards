@@ -10,14 +10,20 @@ from core.physics import PhysicsEngine
 from core.ball import Ball
 from core.game_rules import GameRules
 from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QPixmap, QImage
 
 class GameCanvas(QGraphicsView):
     game_over_signal = pyqtSignal(int)
     
     def __init__(self, physics, table, balls, parent=None):
         super().__init__(parent)
-        self.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.setFixedSize(1000, 550)
+        self.setRenderHints(QPainter.RenderHint.Antialiasing | 
+                          QPainter.RenderHint.TextAntialiasing | 
+                          QPainter.RenderHint.SmoothPixmapTransform)
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+        self.setOptimizationFlag(QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing, True)
+        self.setMinimumSize(800, 450)
+
         
         self.scene = QGraphicsScene(self)
         self.scene.setSceneRect(0, 0, table.width, table.height)
@@ -41,6 +47,13 @@ class GameCanvas(QGraphicsView):
         self.current_player = 1
         self.last_potted_player = None
         
+        self.original_table_width = table.width
+        self.original_table_height = table.height
+
+        self.scene = QGraphicsScene(self)
+        self.scene.setSceneRect(0, 0, table.width, table.height)
+        self.setScene(self.scene)
+
         self.draw_table()
         self.update_balls()
         self.setup_collision_handler()
@@ -124,9 +137,11 @@ class GameCanvas(QGraphicsView):
         ball_handler.pre_solve = self.handle_ball_collision
 
     def create_table_brush(self):
-        gradient = QRadialGradient(450, 225, 500)
-        gradient.setColorAt(0, QColor(0, 80, 0))
-        gradient.setColorAt(1, QColor(0, 50, 0))
+        gradient = QRadialGradient(self.table.width/2, self.table.height/2, 
+                                 max(self.table.width, self.table.height)/1.5)
+        gradient.setColorAt(0, QColor(0, 100, 0))
+        gradient.setColorAt(0.5, QColor(0, 80, 0))
+        gradient.setColorAt(1, QColor(0, 60, 0))
         return QBrush(gradient)
 
     def draw_table(self):
@@ -392,3 +407,23 @@ class GameCanvas(QGraphicsView):
 
     def handle_ball_collision(self, arbiter, space, data):
         return True
+    
+    def resizeEvent(self, event):
+        """Обработчик изменения размера окна"""
+        super().resizeEvent(event)
+        self.adjust_table_size()
+        
+    def adjust_table_size(self):
+        """Адаптирует размер стола к текущему размеру виджета"""
+        # Рассчитываем новые размеры с сохранением пропорций
+        view_rect = self.viewport().rect()
+        width_ratio = view_rect.width() / self.original_table_width
+        height_ratio = view_rect.height() / self.original_table_height
+        scale_factor = min(width_ratio, height_ratio) * 0.95  # Небольшой отступ
+        
+        # Применяем масштабирование
+        self.resetTransform()
+        self.scale(scale_factor, scale_factor)
+        
+        # Центрируем сцену
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)

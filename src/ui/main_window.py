@@ -10,7 +10,7 @@ class MainWindow(QMainWindow):
     def __init__(self, game_canvas):
         super().__init__()
         self.setWindowTitle("2D Бильярд")
-        self.setFixedSize(1000, 650)
+        self.setMinimumSize(800, 600)
         
         self.game_canvas = game_canvas
         self.timer = QTimer()
