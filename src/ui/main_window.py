@@ -2,7 +2,7 @@
 from PyQt6.QtCore import (QTimer, QPropertyAnimation, QEasingCurve, QRect,
                          Qt, QPointF)
 from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QLabel,
-                            QPushButton, QMessageBox, QHBoxLayout, QSizePolicy, 
+                            QPushButton, QMessageBox, QHBoxLayout, QSizePolicy, QApplication, 
                             QStackedWidget)
 from PyQt6.QtGui import QFont, QColor, QPainter
 
@@ -147,9 +147,9 @@ class MainWindow(QMainWindow):
         self.game_canvas.physics.update(1/60.0)
         self.game_canvas.update_display()
         
-        # Обновляем счет
-        self.player1_label.setText(str(self.game_canvas.player1_score))
+        # Обновляем счет (теперь player2 слева, player1 справа)
         self.player2_label.setText(str(self.game_canvas.player2_score))
+        self.player1_label.setText(str(self.game_canvas.player1_score))
         
         # Обновляем отображение шаров
         self.update_score_balls()
@@ -169,7 +169,7 @@ class MainWindow(QMainWindow):
                 color: #2196F3;
                 qproperty-alignment: AlignCenter;
             """)
-
+            
     def update_score_balls(self):
         # Очищаем контейнеры забитых шаров
         for i in reversed(range(self.player1_potted_layout.count())):
@@ -266,9 +266,34 @@ class MainWindow(QMainWindow):
         
         ret = msg.exec()
         if ret == QMessageBox.StandardButton.Yes:
-            self.game_canvas.reset_game()
-            self.player1_label.setText("0")
-            self.player2_label.setText("0")
-            self.update_score_balls()
+            self.reset_game()  # Вызываем сброс игры
         else:
-            self.close()
+            QApplication.instance().quit()  # Закрываем приложение
+
+    def reset_game(self):
+        # Полный сброс интерфейса
+        self.game_canvas.reset_game()
+        
+        # Очистка контейнеров забитых шаров
+        for i in reversed(range(self.player1_potted_layout.count())):
+            self.player1_potted_layout.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.player2_potted_layout.count())):
+            self.player2_potted_layout.itemAt(i).widget().setParent(None)
+        
+        # Сброс счетов
+        self.player1_label.setText("0")
+        self.player2_label.setText("0")
+        
+        # Восстановление всех шаров в панели
+        for ball in self.player1_balls.values():
+            ball.show()
+        for ball in self.player2_balls.values():
+            ball.show()
+        
+        # Сброс индикатора игрока
+        self.current_player_indicator.setText("▶ ИГРОК 1 ◀")
+        self.current_player_indicator.setStyleSheet("""
+            font: bold 18px;
+            color: #4CAF50;
+            qproperty-alignment: AlignCenter;
+        """)

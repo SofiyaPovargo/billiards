@@ -46,7 +46,13 @@ class GameRules:
             else:
                 self.player2_score += 1
         else:
+            # Если игрок забил шар соперника, ход переходит
             self.current_player = 2 if self.current_player == 1 else 1
+            # Также засчитываем очко сопернику
+            if self.current_player == 1:
+                self.player1_score += 1
+            else:
+                self.player2_score += 1
         
     def assign_ball_type(self):
         if 1 <= self.first_ball_pocketed <= 7:
