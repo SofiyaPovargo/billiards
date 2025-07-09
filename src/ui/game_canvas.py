@@ -51,6 +51,8 @@ class GameCanvas(QGraphicsView):
         self.cue_ball_out_pos = (50, table.height/2)
         self.dragging_cue_ball = False
 
+        self.potted_balls_order = []
+
     def reset_game(self):
         # Используем post-step callback для безопасного сброса
         def post_step_reset(space, key):
@@ -264,6 +266,7 @@ class GameCanvas(QGraphicsView):
                     return False
                 
                 else:
+                    self.potted_balls_order.append(ball.number)
                     if self.current_player == 1 and 1 <= ball.number <= 7:
                         self.player1_score += 1
                         self.window().animate_ball(1, ball.number) 

@@ -2,19 +2,24 @@
 from PyQt6.QtCore import (QTimer, QPropertyAnimation, QEasingCurve, QRect,
                          Qt, QPointF)
 from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QLabel,
-                            QPushButton, QMessageBox, QHBoxLayout, QSizePolicy)
+                            QPushButton, QMessageBox, QHBoxLayout, QSizePolicy, 
+                            QStackedWidget)
 from PyQt6.QtGui import QFont, QColor, QPainter
 
 class MainWindow(QMainWindow):
     def __init__(self, game_canvas):
         super().__init__()
         self.setWindowTitle("2D Бильярд")
-        self.setFixedSize(1000, 650) 
+        self.setFixedSize(1000, 650)
         
         self.game_canvas = game_canvas
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_game)
         self.timer.start(16)  # ~60 FPS
+        
+        # Словари для хранения виджетов шаров
+        self.player1_balls = {}
+        self.player2_balls = {}
         
         self.create_score_widget()
         self.init_score_balls()
@@ -42,17 +47,26 @@ class MainWindow(QMainWindow):
         self.score_layout.setContentsMargins(20, 10, 20, 10)
         self.score_layout.setSpacing(30)
         
-        # Контейнер игрока 1
+        # Контейнер игрока 1 (сплошные шары)
         self.player1_container = QWidget()
         self.player1_layout = QHBoxLayout()
         self.player1_layout.setSpacing(10)
         self.player1_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Шары игрока 1 (1-7)
+        
+        # Контейнер для забитых шаров игрока 1
+        self.player1_potted_container = QWidget()
+        self.player1_potted_layout = QHBoxLayout()
+        self.player1_potted_layout.setSpacing(5)
+        self.player1_potted_layout.setContentsMargins(0, 0, 0, 0)
+        self.player1_potted_container.setLayout(self.player1_potted_layout)
+        
+        # Оставшиеся шары игрока 1
         for i in range(1, 8):
-            self.add_ball_to_layout(self.player1_layout, i)
-                
+            self.add_ball_to_layout(self.player1_layout, i, "player1")
+        
         self.player1_label = self.create_score_label()
+        
+        # Собираем контейнер игрока 1
         self.player1_layout.addWidget(self.player1_label)
         self.player1_container.setLayout(self.player1_layout)
         
@@ -65,18 +79,26 @@ class MainWindow(QMainWindow):
             min-width: 150px;
         """)
         
-        # Контейнер игрока 2
+        # Контейнер игрока 2 (полосатые шары)
         self.player2_container = QWidget()
         self.player2_layout = QHBoxLayout()
         self.player2_layout.setSpacing(10)
         self.player2_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Шары игрока 2 (9-15)
-        for i in range(9, 16):
-            self.add_ball_to_layout(self.player2_layout, i)
-
+        
+        # Контейнер для забитых шаров игрока 2
+        self.player2_potted_container = QWidget()
+        self.player2_potted_layout = QHBoxLayout()
+        self.player2_potted_layout.setSpacing(5)
+        self.player2_potted_layout.setContentsMargins(0, 0, 0, 0)
+        self.player2_potted_container.setLayout(self.player2_potted_layout)
+        
         self.player2_label = self.create_score_label()
         self.player2_layout.addWidget(self.player2_label)
+        
+        # Оставшиеся шары игрока 2
+        for i in range(9, 16):
+            self.add_ball_to_layout(self.player2_layout, i, "player2")
+        
         self.player2_container.setLayout(self.player2_layout)
         
         # Собираем все вместе
@@ -99,7 +121,7 @@ class MainWindow(QMainWindow):
         """)
         return label
 
-    def add_ball_to_layout(self, layout, ball_number):
+    def add_ball_to_layout(self, layout, ball_number, player):
         ball = QLabel()
         ball.setFixedSize(24, 24)
         color = self.get_ball_color(ball_number)
@@ -108,7 +130,14 @@ class MainWindow(QMainWindow):
             border-radius: 12px;
             border: 1px solid black;
         """)
+        ball.setProperty("ball_number", ball_number)
         layout.addWidget(ball)
+        
+        # Сохраняем ссылку на виджет шара
+        if player == "player1":
+            self.player1_balls[ball_number] = ball
+        else:
+            self.player2_balls[ball_number] = ball
 
     def init_score_balls(self):
         # Инициализация уже выполнена в create_score_widget()
@@ -142,32 +171,54 @@ class MainWindow(QMainWindow):
             """)
 
     def update_score_balls(self):
-        # Игрок 1 (шары 1-7)
-        for i in range(1, 8):
-            ball = self.player1_layout.itemAt(i-1).widget()
-            state = "active" if i <= self.game_canvas.player1_score else "inactive"
-            self.update_ball_style(ball, i, state)
+        # Очищаем контейнеры забитых шаров
+        for i in reversed(range(self.player1_potted_layout.count())):
+            self.player1_potted_layout.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.player2_potted_layout.count())):
+            self.player2_potted_layout.itemAt(i).widget().setParent(None)
         
-        # Игрок 2 (шары 9-15)
-        for i in range(9, 16):
-            ball = self.player2_layout.itemAt(i-9).widget()
-            state = "active" if (i-8) <= self.game_canvas.player2_score else "inactive"
-            self.update_ball_style(ball, i, state)
+        # Добавляем забитые шары в порядке их попадания
+        for ball_number in self.game_canvas.potted_balls_order:
+            if 1 <= ball_number <= 7:  # Шары игрока 1
+                ball = self.player1_balls.get(ball_number)
+                if ball:
+                    ball_copy = self.create_ball_copy(ball)
+                    self.player1_potted_layout.addWidget(ball_copy)
+            elif 9 <= ball_number <= 15:  # Шары игрока 2
+                ball = self.player2_balls.get(ball_number)
+                if ball:
+                    ball_copy = self.create_ball_copy(ball)
+                    self.player2_potted_layout.addWidget(ball_copy)
+        
+        # Обновляем стили оставшихся шаров
+        self.update_remaining_balls()
 
-    def update_ball_style(self, ball, number, state):
-        color = self.get_ball_color(number)
-        if state == "active":
-            ball.setStyleSheet(f"""
-                background: {color};
-                border-radius: 12px;
-                border: 2px solid white;
-            """)
-        else:
-            ball.setStyleSheet(f"""
-                background: #555;
-                border-radius: 12px;
-                border: 1px solid #333;
-            """)
+    def create_ball_copy(self, original_ball):
+        ball = QLabel()
+        ball.setFixedSize(24, 24)
+        ball.setStyleSheet(original_ball.styleSheet())
+        return ball
+
+    def update_remaining_balls(self):
+        # Для игрока 1
+        potted_solids = [num for num in self.game_canvas.potted_balls_order if 1 <= num <= 7]
+        for num in range(1, 8):
+            ball = self.player1_balls.get(num)
+            if ball:
+                if num in potted_solids:
+                    ball.hide()
+                else:
+                    ball.show()
+        
+        # Для игрока 2
+        potted_stripes = [num for num in self.game_canvas.potted_balls_order if 9 <= num <= 15]
+        for num in range(9, 16):
+            ball = self.player2_balls.get(num)
+            if ball:
+                if num in potted_stripes:
+                    ball.hide()
+                else:
+                    ball.show()
 
     def get_ball_color(self, number):
         colors = {
@@ -180,9 +231,9 @@ class MainWindow(QMainWindow):
 
     def animate_ball(self, player, ball_number):
         if player == 1:
-            ball = self.player1_layout.itemAt(ball_number-1).widget()
+            ball = self.player1_balls.get(ball_number)
         else:
-            ball = self.player2_layout.itemAt(ball_number-9).widget()
+            ball = self.player2_balls.get(ball_number)
         
         if not ball:
             return
@@ -218,6 +269,6 @@ class MainWindow(QMainWindow):
             self.game_canvas.reset_game()
             self.player1_label.setText("0")
             self.player2_label.setText("0")
-            self.update_score_balls()  # Сбрасываем отображение шаров
+            self.update_score_balls()
         else:
             self.close()
