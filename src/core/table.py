@@ -8,15 +8,15 @@ class Table:
 
     def _init_pockets(self) -> list[tuple[float, float]]:
         return [
-            (25, 25),  
-            (self.width // 2, 25),
-            (self.width - 25, 25), 
-            (25, self.height - 25), 
-            (self.width // 2, self.height - 25),
-            (self.width - 25, self.height - 25)
+            (20, 20),  
+            (self.width // 2, 20),
+            (self.width - 20, 20), 
+            (20, self.height - 20), 
+            (self.width // 2, self.height - 20),
+            (self.width - 20, self.height - 20)
         ]
     
-    def create_pymunk_borders(self, space: pm.Space, thickness: float = 20.0):
+    def create_pymunk_borders(self, space: pm.Space, thickness: float = 25.0):
         borders = [
             [(0, 0), (self.width, 0)],
             [(0, self.height), (self.width, self.height)],
@@ -25,5 +25,6 @@ class Table:
         ]
         for start, end in borders:
             border = pm.Segment(space.static_body, start, end, thickness)
-            border.elasticity = 0.8
+            border.elasticity = 0.6
+            border.friction = 0.5
             space.add(border)

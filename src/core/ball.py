@@ -45,7 +45,7 @@ class Ball:
         body = pm.Body(mass, inertia)
         body.position = self.position
         shape = pm.Circle(body, self.radius)
-        shape.elasticity = 0.95
+        shape.elasticity = 0.6
         shape.friction = 0.4
         space.add(body, shape)
         self.body = body

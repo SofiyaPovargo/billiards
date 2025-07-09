@@ -3,8 +3,8 @@ from core.ball import Ball
 
 class GameRules:
     def __init__(self):
-        self.player1_core = 0
-        self.player2_core = 0
+        self.player1_score = 0
+        self.player2_score = 0
         self.current_player = 1
         self.game_state = "playing"
         self.player1_type = None  # Шар с полоской или сплошной 

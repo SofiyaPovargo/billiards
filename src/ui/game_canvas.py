@@ -6,6 +6,10 @@ from PyQt6.QtGui import (QBrush, QColor, QPen, QRadialGradient, QPainter, QPaint
                          QFont, QLinearGradient)
 import pymunk as pm
 import math
+from core.physics import PhysicsEngine
+from core.ball import Ball
+from core.game_rules import GameRules
+from PyQt6.QtCore import QTimer
 
 class GameCanvas(QGraphicsView):
     game_over_signal = pyqtSignal(int)
@@ -19,6 +23,8 @@ class GameCanvas(QGraphicsView):
         self.scene.setSceneRect(0, 0, table.width, table.height)
         self.setScene(self.scene)
         
+        self.game_rules = GameRules() 
+
         self.physics = physics
         self.table = table
         self.initial_balls = balls.copy()
@@ -39,25 +45,58 @@ class GameCanvas(QGraphicsView):
         self.update_balls()
         self.setup_collision_handler()
 
-    def reset_game(self):
-        # Сброс игры
-        self.balls = self.initial_balls.copy()
-        for ball in self.balls:
-            if not hasattr(ball, 'body') or ball.body is None:
-                ball.create_pymunk_body(self.physics.space)
-            ball.in_pocket = False
-            ball.body.position = ball.position
-            ball.body.velocity = (0, 0)
+        self.allow_cue_ball_reposition = False
         
-        self.player1_score = 0
-        self.player2_score = 0
-        self.current_player = 1
-        self.last_potted_player = None
-        self.update_balls()
+        self.cue_ball_start_pos = (300, table.height/2)  
+        self.cue_ball_out_pos = (50, table.height/2)
+        self.dragging_cue_ball = False
+
+    def reset_game(self):
+        # Используем post-step callback для безопасного сброса
+        def post_step_reset(space, key):
+            # Удаляем все тела
+            for body in space.bodies:
+                space.remove(body)
+            
+            # Добавляем стол заново
+            self.physics.add_table(self.table)
+            
+            # Создаем новые шары
+            self.balls = []
+            for initial_ball in self.initial_balls:
+                new_ball = Ball(
+                    number=initial_ball.number,
+                    radius=initial_ball.radius,
+                    position=initial_ball.position,
+                    color=initial_ball.color
+                )
+                self.physics.add_ball(new_ball)
+                self.balls.append(new_ball)
+            
+            # Сбрасываем игровые параметры
+            self.player1_score = 0
+            self.player2_score = 0
+            self.current_player = 1
+            self.last_potted_player = None
+            self.allow_cue_ball_reposition = False
+            self.cue_ball = self.balls[0] if self.balls else None
+            
+            # Обновляем отображение
+            QTimer.singleShot(0, self.update_balls)
+            self.setup_collision_handler()
+        
+        self.physics.space.add_post_step_callback(post_step_reset, None)
+    
 
     def setup_collision_handler(self):
-        handler = self.physics.space.add_collision_handler(0, 1)
+            # Обработчик столкновений шаров с лузами
+        handler = self.physics.space.add_collision_handler(1, 2)  # Шары (1) и лузы (2)
         handler.begin = self.handle_ball_pocket_collision
+    
+        # Обработчик столкновений шаров между собой
+        ball_handler = self.physics.space.add_collision_handler(1, 1)
+        ball_handler.begin = self.handle_ball_collision
+        ball_handler.pre_solve = self.handle_ball_collision
 
     def create_table_brush(self):
         gradient = QRadialGradient(450, 225, 500)
@@ -84,7 +123,7 @@ class GameCanvas(QGraphicsView):
         pocket_brush = QBrush(QColor(0, 0, 0))
         for pos in self.table.pockets:
             pocket = self.scene.addEllipse(
-                pos[0]-25, pos[1]-25, 50, 50,
+                pos[0]-20, pos[1]-20, 40, 40,
                 QPen(Qt.PenStyle.NoPen), pocket_brush
             )
             pocket.is_pocket = True 
@@ -99,12 +138,6 @@ class GameCanvas(QGraphicsView):
         
         for pocket in self.pockets:
             pocket.is_table_item = True
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self.cue_ball and not self.cue_ball.in_pocket:
-            # Проверяем, что все шары остановились
-            if all(not ball.is_moving() for ball in self.balls if not ball.in_pocket):
-                self.drag_start = self.mapToScene(event.pos())
             
     def mouseMoveEvent(self, event):
         if self.drag_start and self.cue_ball and not self.cue_ball.in_pocket:
@@ -184,7 +217,7 @@ class GameCanvas(QGraphicsView):
                     self.cue_ball.body.velocity = (force * math.cos(angle), 
                                                 force * math.sin(angle))
                     
-                    if self.last_potted_player != self.current_player:
+                    if not any(ball.in_pocket for ball in self.balls if ball.number != 0):
                         self.current_player = 3 - self.current_player
             
             # Удаляем кий после удара
@@ -198,24 +231,70 @@ class GameCanvas(QGraphicsView):
             if hasattr(ball, 'body') and ball.body and ball.body == ball_shape.body:
                 ball.in_pocket = True
                 
-                # Обновляем счет
                 if ball.number == 0:  # Биток
-                    self.last_potted_player = None
+                    # Переносим биток в специальную позицию
+                    ball.body.position = self.cue_ball_out_pos
+                    ball.body.velocity = (0, 0)
+                    ball.in_pocket = False
+                    self.dragging_cue_ball = True
                     # Штраф за биток - передача хода
                     self.current_player = 3 - self.current_player
+                    return False
+                
                 elif ball.number == 8:  # Черный шар
-                    if all(b.in_pocket or b.number == 0 or b.number == 8 for b in self.balls):
-                        # Конец игры
-                        self.game_over_signal.emit(self.current_player)
+                    # Проверяем условия победы
+                    player_balls = []
+                    opponent_balls = []
+                    
+                    if self.current_player == 1:
+                        player_balls = [b for b in self.initial_balls if 1 <= b.number <= 7]
+                        opponent_balls = [b for b in self.initial_balls if 9 <= b.number <= 15]
+                    else:
+                        player_balls = [b for b in self.initial_balls if 9 <= b.number <= 15]
+                        opponent_balls = [b for b in self.initial_balls if 1 <= b.number <= 7]
+                    
+                    # Все шары игрока должны быть забиты до черного
+                    player_balls_potted = all(b.in_pocket for b in player_balls)
+                    opponent_balls_potted = any(b.in_pocket for b in opponent_balls)
+                    
+                    if player_balls_potted and not opponent_balls_potted:
+                        self.game_over_signal.emit(self.current_player)  # Победа
+                    else:
+                        self.game_over_signal.emit(3 - self.current_player)  # Поражение
+                    return False
                 else:
+                    # Обычный шар - добавляем очки
                     if self.current_player == 1:
                         self.player1_score += 1
                     else:
                         self.player2_score += 1
                     self.last_potted_player = self.current_player
-                
-                return False 
+                    
+                    # Проверяем, все ли шары игрока забиты
+                    if self.current_player == 1:
+                        remaining = [b for b in self.balls if 1 <= b.number <= 7]
+                    else:
+                        remaining = [b for b in self.balls if 9 <= b.number <= 15]
+                    
+                    if not remaining:
+                        # Все шары забиты, можно бить по черному
+                        pass
+                    
+                    return False
         return True
+
+    def mousePressEvent(self, event):
+        if self.dragging_cue_ball and event.button() == Qt.MouseButton.LeftButton:
+            # Проверяем, что кликнули по битку
+            pos = self.mapToScene(event.pos())
+            ball_pos = QPointF(*self.cue_ball.body.position)
+            if (pos - ball_pos).manhattanLength() < self.cue_ball.radius * 2:
+                self.drag_start = pos
+                return
+        
+        if event.button() == Qt.MouseButton.LeftButton and self.cue_ball and not self.cue_ball.in_pocket:
+            if all(not ball.is_moving() for ball in self.balls if not ball.in_pocket):
+                self.drag_start = self.mapToScene(event.pos())
 
     def draw_ball(self, ball):
         if ball.in_pocket or not hasattr(ball, 'position') or not ball.position:
@@ -287,3 +366,6 @@ class GameCanvas(QGraphicsView):
 
     def update_display(self):
         self.update_balls()
+
+    def handle_ball_collision(self, arbiter, space, data):
+        return True

@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QLabel,
                             QPushButton, QMessageBox, QHBoxLayout)
 from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QFont
+from core.physics import PhysicsEngine
 
 class MainWindow(QMainWindow):
     def __init__(self, game_canvas):
@@ -48,6 +49,10 @@ class MainWindow(QMainWindow):
         self.game_canvas.physics.update(1/60.0)
         self.game_canvas.update_display()
         
+        if hasattr(self.game_canvas, 'game_rules'):
+            self.player1_score = self.game_canvas.game_rules.player1_score
+            self.player2_score = self.game_canvas.game_rules.player2_score
+            self.current_player = self.game_canvas.game_rules.current_player
         # Обновляем счет
         self.player1_label.setText(f"Игрок 1: {self.game_canvas.player1_score}")
         self.player2_label.setText(f"Игрок 2: {self.game_canvas.player2_score}")
@@ -63,5 +68,8 @@ class MainWindow(QMainWindow):
         ret = msg.exec()
         if ret == QMessageBox.StandardButton.Yes:
             self.game_canvas.reset_game()
+            self.player1_score = 0
+            self.player2_score = 0
+            self.current_player = 1
         else:
             self.close()

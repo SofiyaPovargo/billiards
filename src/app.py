@@ -2,6 +2,7 @@
 import sys
 import math
 import os
+import copy
 from PyQt6.QtWidgets import QApplication
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.physics import PhysicsEngine
@@ -33,7 +34,7 @@ def init_balls(table_width, table_height):
             y = start_y + (col - row/2) * spacing
             balls.append(Ball(ball_num, ball_radius, (x, y)))
     
-    return balls
+    return copy.deepcopy(balls)
 
 def main():
     app = QApplication(sys.argv)
