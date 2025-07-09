@@ -262,25 +262,14 @@ class GameCanvas(QGraphicsView):
                     else:
                         self.game_over_signal.emit(3 - self.current_player)  # Поражение
                     return False
+                
                 else:
-                    # Обычный шар - добавляем очки
-                    if self.current_player == 1:
+                    if self.current_player == 1 and 1 <= ball.number <= 7:
                         self.player1_score += 1
-                    else:
+                        self.window().animate_ball(1, ball.number) 
+                    elif self.current_player == 2 and 9 <= ball.number <= 15:
                         self.player2_score += 1
-                    self.last_potted_player = self.current_player
-                    
-                    # Проверяем, все ли шары игрока забиты
-                    if self.current_player == 1:
-                        remaining = [b for b in self.balls if 1 <= b.number <= 7]
-                    else:
-                        remaining = [b for b in self.balls if 9 <= b.number <= 15]
-                    
-                    if not remaining:
-                        # Все шары забиты, можно бить по черному
-                        pass
-                    
-                    return False
+                        self.window().animate_ball(2, ball.number) 
         return True
 
     def mousePressEvent(self, event):
