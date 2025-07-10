@@ -122,22 +122,38 @@ class MainWindow(QMainWindow):
         return label
 
     def add_ball_to_layout(self, layout, ball_number, player):
-        ball = QLabel()
-        ball.setFixedSize(24, 24)
+        container = QWidget()
+        container.setFixedSize(36, 36)
+        container.setStyleSheet("background: transparent;")
+        
+        # Основной круг шара
+        ball = QLabel(container)
+        ball.setGeometry(0, 0, 36, 36)
         color = self.get_ball_color(ball_number)
         ball.setStyleSheet(f"""
             background: {color};
-            border-radius: 12px;
+            border-radius: 18px;
             border: 1px solid black;
         """)
-        ball.setProperty("ball_number", ball_number)
-        layout.addWidget(ball)
+        
+        # Добавляем полосу для шаров 9-15
+        if 9 <= ball_number <= 15:
+            stripe = QLabel(container)
+            stripe.setGeometry(1, 15, 34, 8)  # Позиция и размер полосы
+            stripe.setStyleSheet("""
+                background: white;
+                border-radius: 3px;
+                border: none;
+            """)
+        
+        container.setProperty("ball_number", ball_number)
+        layout.addWidget(container)
         
         # Сохраняем ссылку на виджет шара
         if player == "player1":
-            self.player1_balls[ball_number] = ball
+            self.player1_balls[ball_number] = container
         else:
-            self.player2_balls[ball_number] = ball
+            self.player2_balls[ball_number] = container
 
     def init_score_balls(self):
         # Инициализация уже выполнена в create_score_widget()
@@ -194,10 +210,32 @@ class MainWindow(QMainWindow):
         self.update_remaining_balls()
 
     def create_ball_copy(self, original_ball):
-        ball = QLabel()
-        ball.setFixedSize(24, 24)
-        ball.setStyleSheet(original_ball.styleSheet())
-        return ball
+        ball_number = original_ball.property("ball_number")
+        container = QWidget()
+        container.setFixedSize(36, 36)
+        container.setStyleSheet("background: transparent;")
+        
+        # Основной круг шара
+        ball = QLabel(container)
+        ball.setGeometry(0, 0, 36, 36)
+        color = self.get_ball_color(ball_number)
+        ball.setStyleSheet(f"""
+            background: {color};
+            border-radius: 18px;
+            border: 1px solid black;
+        """)
+        
+        # Добавляем полосу для шаров 9-15
+        if 9 <= ball_number <= 15:
+            stripe = QLabel(container)
+            stripe.setGeometry(1, 15, 34, 8)
+            stripe.setStyleSheet("""
+                background: white;
+                border-radius: 3px;
+                border: none;
+            """)
+        
+        return container
 
     def update_remaining_balls(self):
         # Для игрока 1

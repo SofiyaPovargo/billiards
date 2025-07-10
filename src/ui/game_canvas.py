@@ -349,13 +349,19 @@ class GameCanvas(QGraphicsView):
         self.scene.addItem(ball_item)
         
         if 9 <= ball.number <= 15:
-            stripe = QGraphicsEllipseItem(ball_item)  
-            stripe.setRect(
-                ball.position[0] - ball.radius*0.8,
-                ball.position[1] - ball.radius*0.3,
-                ball.radius*1.6,
-                ball.radius*0.6
+            # Создаем полосу с закругленными краями
+            path = QPainterPath()
+            stripe_width = ball.radius * 1.9
+            stripe_height = ball.radius * 0.6
+            path.addRoundedRect(
+                ball.position[0] - stripe_width/2,
+                ball.position[1] - stripe_height/2,
+                stripe_width,
+                stripe_height,
+                stripe_height/2,
+                stripe_height/2
             )
+            stripe = QGraphicsPathItem(path, ball_item)
             stripe.setPen(QPen(Qt.PenStyle.NoPen))
             stripe.setBrush(QBrush(Qt.GlobalColor.white))
         
