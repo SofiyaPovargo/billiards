@@ -76,7 +76,6 @@ class GameCanvas(QGraphicsView):
         exit_action.triggered.connect(lambda: QApplication.instance().quit())
         self.addAction(exit_action)
 
-    
     def reset_game(self):
         # Полная очистка физического пространства
         for body in self.physics.space.bodies:
@@ -92,18 +91,34 @@ class GameCanvas(QGraphicsView):
         
         # Полностью пересоздаем шары из начальных параметров
         self.balls = []
-        for initial_ball in self.initial_balls:
-            new_ball = Ball(
-                number=initial_ball.number,
-                radius=initial_ball.radius,
-                position=initial_ball.position,
-                color=initial_ball.color
-            )
-            self.physics.add_ball(new_ball)
-            self.balls.append(new_ball)
-            # Гарантируем нулевую скорость
-            if new_ball.body:
-                new_ball.body.velocity = (0, 0)
+        
+        # Биток (белый шар)
+        cue_ball = Ball(0, 15, (300, self.table.height/2))
+        self.physics.add_ball(cue_ball)
+        self.balls.append(cue_ball)
+        self.cue_ball = cue_ball
+        
+        # Цветные шары в треугольнике
+        ball_radius = 15
+        pyramid_order = [
+            [1],            # первый ряд
+            [2, 9],         # второй ряд
+            [3, 7, 8],      # третий ряд
+            [10, 6, 4, 5],  # четвертый ряд
+            [11, 15, 14, 12, 13]  # пятый ряд
+        ]
+        
+        start_x, start_y = 600, self.table.height/2
+        spacing = ball_radius * 2.2
+
+        for row in range(len(pyramid_order)):
+            for col in range(len(pyramid_order[row])):
+                ball_num = pyramid_order[row][col]
+                x = start_x + row * spacing * math.cos(math.pi/6)
+                y = start_y + (col - row/2) * spacing
+                ball = Ball(ball_num, ball_radius, (x, y))
+                self.physics.add_ball(ball)
+                self.balls.append(ball)
         
         # Полный сброс игрового состояния
         self.player1_score = 0
@@ -111,8 +126,7 @@ class GameCanvas(QGraphicsView):
         self.current_player = 1
         self.last_potted_player = None
         self.potted_balls_order = []
-        self.cue_ball = self.balls[0] if self.balls else None
-        self.game_rules = GameRules()  # Полностью новые правила
+        self.game_rules = GameRules()
         self.allow_cue_ball_reposition = False
         self.dragging_cue_ball = False
         
@@ -138,7 +152,7 @@ class GameCanvas(QGraphicsView):
 
     def create_table_brush(self):
         gradient = QRadialGradient(self.table.width/2, self.table.height/2, 
-                                 max(self.table.width, self.table.height)/1.5)
+                                max(self.table.width, self.table.height)/1.5)
         gradient.setColorAt(0, QColor(0, 100, 0))
         gradient.setColorAt(0.5, QColor(0, 80, 0))
         gradient.setColorAt(1, QColor(0, 60, 0))
@@ -147,8 +161,8 @@ class GameCanvas(QGraphicsView):
     def draw_table(self):
         # Основное поле
         self.table_rect = self.scene.addRect(0, 0, self.table.width, self.table.height,
-                         QPen(Qt.PenStyle.NoPen),
-                         self.create_table_brush())
+                        QPen(Qt.PenStyle.NoPen),
+                        self.create_table_brush())
         
         # Борта
         border_brush = QBrush(QColor(101, 67, 33)) 
