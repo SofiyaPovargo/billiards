@@ -10,7 +10,7 @@ class MainWindow(QMainWindow):
     def __init__(self, game_canvas):
         super().__init__()
         self.setWindowTitle("2D Бильярд")
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(900, 600)
         
         self.game_canvas = game_canvas
         self.timer = QTimer()
@@ -148,8 +148,8 @@ class MainWindow(QMainWindow):
         self.game_canvas.update_display()
         
         # Обновляем счет (теперь player2 слева, player1 справа)
-        self.player2_label.setText(str(self.game_canvas.player2_score))
         self.player1_label.setText(str(self.game_canvas.player1_score))
+        self.player2_label.setText(str(self.game_canvas.player2_score))
         
         # Обновляем отображение шаров
         self.update_score_balls()

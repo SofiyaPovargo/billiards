@@ -319,8 +319,8 @@ class GameCanvas(QGraphicsView):
                     self.current_player = self.game_rules.current_player
                     
                     # Обновляем счет
-                    self.player1_score = self.game_rules.player1_score
-                    self.player2_score = self.game_rules.player2_score
+                    self.player2_score = self.game_rules.player1_score
+                    self.player1_score = self.game_rules.player2_score
         return True
 
     def mousePressEvent(self, event):

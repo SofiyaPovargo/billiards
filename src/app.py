@@ -52,7 +52,7 @@ def main():
     game_canvas = GameCanvas(physics, table, balls)
 
     window = MainWindow(game_canvas)
-    window.showFullScreen()
+    window.showMaximized()
     
     sys.exit(app.exec())
 
