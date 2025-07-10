@@ -1,8 +1,7 @@
 # 🎱 Бильярд - Имитация физики бильярдного стола:
 **Проект по итогам учебной практики ФПМИ БГУ 1 курс**
 
-![Billiards game](https://github.com/SofiyaPovargo/billiards/blob/master/result.png)
-
+<img src="https://github.com/SofiyaPovargo/billiards/blob/master/result.png" width="300" alt="Billiards game">
 ## 🧰 Стек технологий
 
 ### Язык программирования
